@@ -19,19 +19,19 @@ function New-RandomString {
         Write-Error "All characters have been excluded."
         break
     }
-    switch ($ExcludeSet -contains "LowerCase") {
+    switch ($ExcludeSet -eq "LowerCase") {
         True  { $LowerCaseString = "" }
         False { $LowerCaseString = "abcdefghijklmnopqrstuvwxyz" }
     }
-    switch ($ExcludeSet -contains "UpperCase") {
+    switch ($ExcludeSet -eq "UpperCase") {
         True  { $UpperCaseString = "" }
         False { $UpperCaseString = "ABCDEFGHIJKLMNOPQRSTUVWXYZ" }
     }
-    switch ($ExcludeSet -contains "Numerical") {
+    switch ($ExcludeSet -eq "Numerical") {
         True  { $NumericalString = "" }
         False { $NumericalString = "0123456789" }
     }
-    switch ($ExcludeSet -contains "Special") {
+    switch ($ExcludeSet -eq "Special") {
         True  { $SpecialString = "" }
         False { $SpecialString = "~!@#$%^&*_-+=`|\(){}[]:;`"`'<>,.?/" }
     }
@@ -39,8 +39,10 @@ function New-RandomString {
     $global:RandomString = ""
     $ComplexityString = $LowerCaseString + $UpperCaseString + $NumericalString + $SpecialString
     
-    foreach ($c in $Exclude.ToCharArray()) {
-        $ComplexityString = $ComplexityString.Replace($c.ToString(),"")
+    if ($Exclude) {
+        foreach ($c in $Exclude.ToCharArray()) {
+            $ComplexityString = $ComplexityString.Replace($c.ToString(),"")
+        }
     }
 
     for ($i=1; $i -le $Length; $i++) {
