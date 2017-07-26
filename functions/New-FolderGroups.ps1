@@ -1,23 +1,47 @@
 function New-FolderGroups { 
     <# 
     .SYNOPSIS 
-        Describe the function here.
+        Creates a new folder and associated Domain Local groups in Active Directory with respective NTFS permissions (Modify and ReadAndExecute).
     .DESCRIPTION 
-        Describe the function in more detail.
+        'New-FolderGroups' creates a new folder on a specified network location and subsequently creates separate Modify and Read-Only Domain Local Security groups in the Active Directory domain. 
+        
+        Group name prefixes and suffixes can be specified, or group names can be generated automatically.
+
     .CHANGELOG
-        Keep track of version history and information here.
+        Date            Name            Version     Comments
+        2017-07-26      Tim Hoogland    1.0         First version.
     .EXAMPLE 
-        Give an example of how to use it.
-    .PARAMETER paramName 
-        Describe the function parameter here.
+        New-FolderGroups -FolderPath "\\server.domain.com\new folder" -DomainLocalOrganizationalUnit "OU=DomainLocal,OU=Groups,OU=Domain.com,DC=Domain,DC=com" -AutoName
+
+        This example creates the folder "new folder" on server.domain.com. Domain Local groups will be created in the Domain.com/Groups/DomainLocal OU. 
+        
+        The -AutoName switch toggles automatic group name generation.
+    .PARAMETER FolderPath
+        Specifies the path to the folder that is to be created by the function.
+    .PARAMETER DomainLocalGroupOrganizationalUnit
+        
+    .PARAMETER AutoName
+        Switch that toggles automatically generated security group names.
+    .PARAMETER IncludeGlobalGroups
+    .PARAMETER NameStub
+    .PARAMETER DomainLocalGroupPrefix
+    .PARAMETER GlobalGroupPrefix
+    .PARAMETER ModifyGroupSuffix
+    .PARAMETER ReadOnlyGroupSuffix
+    .PARAMETER ReadOnlyGroupSuffix
     #>
     [CmdletBinding()]
     param(
-        [parameter(Mandatory=$false)]
-        $DomainName = $env:USERDNSDOMAIN,
-
-        [parameter(Mandatory=$true)]
+        [parameter(Mandatory=$true,Position=0)]
         $FolderPath,
+
+        [parameter(Mandatory=$true,Position=1)]
+        [Alias("DLGOU")]
+        $DomainLocalGroupOrganizationalUnit,
+        
+        [parameter(Mandatory=$false)]
+        [Alias("GGOU")]
+        $GlobalGroupOrganizationalUnit,
         
         [parameter(Mandatory=$false)]
         [switch]$AutoName,
@@ -42,22 +66,13 @@ function New-FolderGroups {
         
         [parameter(Mandatory=$false)]
         [Alias("RGS")]
-        $ReadOnlyGroupSuffix = "_RO",
-        
-        [parameter(Mandatory=$true)]
-        [Alias("DLGOU")]
-        $DomainLocalGroupOrganizationalUnit,
-        
-        [parameter(Mandatory=$false)]
-        [Alias("GGOU")]
-        $GlobalGroupOrganizationalUnit
+        $ReadOnlyGroupSuffix = "_RO"
     )
 
     begin {
         $FolderPath = $FolderPath.TrimEnd("\")
-        if ($DomainName -ne $env:USERDNSDOMAIN) {
-            Write-Warning "Submitted domain '$DomainName' is not equal to user DNS domain '$env:USERDNSDOMAIN'."
-        }
+        $DomainName = $env:USERDNSDOMAIN
+        
         if (Test-Path $FolderPath) {
             Write-Error -Message "This folder already exists: $FolderPath"
             return
