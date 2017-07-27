@@ -250,7 +250,20 @@ function New-FolderGroups {
                 }
             }
             try {
-                Set-Acl $Path $FolderAcl
+                if ($Server -eq $env:COMPUTERNAME) {
+                    Set-Acl -Path $Path -AclObject $FolderAcl
+                }
+                else {
+                    Invoke-Command -ComputerName $Server -ScriptBlock {
+                        param(
+                            $Path,
+                            $NewAcl
+                        )
+                        Set-Acl -Path $Path $NewAcl
+                    } -ArgumentList $LocalPath,$FolderAcl                    
+                }
+
+
                 Write-Output "Successfully updated ACL for folder '$Path'"
             }
             catch {
