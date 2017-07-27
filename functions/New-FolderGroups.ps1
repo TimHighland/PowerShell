@@ -73,6 +73,10 @@ function New-FolderGroups {
         $Path = $Path.TrimEnd("\")
         $DomainName = $env:USERDNSDOMAIN
         
+        if ($Path.Contains(":")) {
+            Write-Error -Message "Parameter 'Path' does not accept local paths. Please specify a UNC path."
+        }
+
         if (!(Test-Path $Path)) {
             Write-Error -Message "This folder does not exist: $Path"
             return
