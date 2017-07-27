@@ -10,6 +10,7 @@ function New-FolderGroups {
     .CHANGELOG
         Date            Name            Version     Comments
         2017-07-26      Tim Hoogland    1.0         First version.
+        2017-07-27      Tim Hoogland    1.1         Function no longer creates folders. 'Set-Acl' is now executed remotely.
     .EXAMPLE 
         New-FolderGroups -Path "\\server.domain.com\new folder" -DomainLocalOrganizationalUnit "OU=DomainLocal,OU=Groups,OU=Domain.com,DC=Domain,DC=com" -AutoName
 
@@ -19,16 +20,21 @@ function New-FolderGroups {
     .PARAMETER Path
         Specifies the path to the folder that is to be created by the function.
     .PARAMETER DomainLocalGroupOrganizationalUnit
-        
+        Specifies the Organizational Unit in which to create Domain Local security groups.
     .PARAMETER AutoName
         Switch that toggles automatically generated security group names.
     .PARAMETER IncludeGlobalGroups
+        Switch that toggles the creation of Global security groups. Use this when there are no suitable role groups available.
     .PARAMETER NameBase
+        Specifies the base of the name for the created security groups.
     .PARAMETER DomainLocalGroupPrefix
+        Specifies the prefix for the created Domain Local security groups.
     .PARAMETER GlobalGroupPrefix
+        Specifies the prefix for the created Global security groups.
     .PARAMETER ModifyGroupSuffix
+        Specifies the suffix for the created Modify groups.
     .PARAMETER ReadOnlyGroupSuffix
-    .PARAMETER ReadOnlyGroupSuffix
+        Specifies the suffix for the created ReadOnly groups.
     #>
     [CmdletBinding()]
     param(
