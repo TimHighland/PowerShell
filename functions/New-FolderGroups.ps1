@@ -75,6 +75,7 @@ function New-FolderGroups {
         
         if ($Path.Contains(":")) {
             Write-Error -Message "Parameter 'Path' does not accept local paths. Please specify a UNC path."
+            return
         }
 
         if (!(Test-Path $Path)) {
