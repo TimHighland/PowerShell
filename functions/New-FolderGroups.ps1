@@ -73,8 +73,8 @@ function New-FolderGroups {
         $Path = $Path.TrimEnd("\")
         $DomainName = $env:USERDNSDOMAIN
         
-        if (Test-Path $Path) {
-            Write-Error -Message "This folder already exists: $Path"
+        if (!(Test-Path $Path)) {
+            Write-Error -Message "This folder does not exist: $Path"
             return
         }
         if (!$DomainLocalGroupOrganizationalUnit) {
@@ -169,7 +169,7 @@ function New-FolderGroups {
             $GroupArray += $GRobj
         }
 
-        Write-Host -BackgroundColor Black -ForegroundColor Cyan "Creating the following folder:"
+        Write-Host -BackgroundColor Black -ForegroundColor Cyan "Settings permissions for the following folder:"
         $Path
         Write-Host "`n"
 
@@ -206,14 +206,6 @@ function New-FolderGroups {
                 catch {
                     Write-Error "Unable to add Global Groups to Domain Local Groups."
                 }            
-            }
-
-            try {
-                New-Item -ItemType Directory $Path
-                Write-Host -BackgroundColor Black -ForegroundColor Green "Successfully created folder '$Path'"
-            }
-            catch {
-                Write-Error -Message "FAILED: unable to create folder '$Path'"
             }
             
             try {
