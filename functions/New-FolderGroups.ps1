@@ -11,12 +11,12 @@ function New-FolderGroups {
         Date            Name            Version     Comments
         2017-07-26      Tim Hoogland    1.0         First version.
     .EXAMPLE 
-        New-FolderGroups -FolderPath "\\server.domain.com\new folder" -DomainLocalOrganizationalUnit "OU=DomainLocal,OU=Groups,OU=Domain.com,DC=Domain,DC=com" -AutoName
+        New-FolderGroups -Path "\\server.domain.com\new folder" -DomainLocalOrganizationalUnit "OU=DomainLocal,OU=Groups,OU=Domain.com,DC=Domain,DC=com" -AutoName
 
         This example creates the folder "new folder" on server.domain.com. Domain Local groups will be created in the Domain.com/Groups/DomainLocal OU. 
         
         The -AutoName switch toggles automatic group name generation.
-    .PARAMETER FolderPath
+    .PARAMETER Path
         Specifies the path to the folder that is to be created by the function.
     .PARAMETER DomainLocalGroupOrganizationalUnit
         
@@ -33,7 +33,7 @@ function New-FolderGroups {
     [CmdletBinding()]
     param(
         [parameter(Mandatory=$true,Position=0)]
-        $FolderPath,
+        $Path,
 
         [parameter(Mandatory=$true,Position=1)]
         [Alias("DLGOU")]
@@ -70,11 +70,11 @@ function New-FolderGroups {
     )
 
     begin {
-        $FolderPath = $FolderPath.TrimEnd("\")
+        $Path = $Path.TrimEnd("\")
         $DomainName = $env:USERDNSDOMAIN
         
-        if (Test-Path $FolderPath) {
-            Write-Error -Message "This folder already exists: $FolderPath"
+        if (Test-Path $Path) {
+            Write-Error -Message "This folder already exists: $Path"
             return
         }
         if (!$DomainLocalGroupOrganizationalUnit) {
@@ -107,7 +107,7 @@ function New-FolderGroups {
         }
         if ($AutoName) {
             $NameStub = ""
-            $SplitFP = $FolderPath.ToUpper().Replace(".$DomainName","").Replace("\\","").Replace("_","").Replace("$","").Split("\")
+            $SplitFP = $Path.ToUpper().Replace(".$DomainName","").Replace("\\","").Replace("_","").Replace("$","").Split("\")
             for ($i=0;$i -le $SplitFP.Count-1; $i++) {
                 $str = "_" + $SplitFP[$i]
                 $NameStub += $str
@@ -170,7 +170,7 @@ function New-FolderGroups {
         }
 
         Write-Host -BackgroundColor Black -ForegroundColor Cyan "Creating the following folder:"
-        $FolderPath
+        $Path
         Write-Host "`n"
 
         Write-Host -BackgroundColor Black -ForegroundColor Cyan "Creating the following groups:"
@@ -209,15 +209,15 @@ function New-FolderGroups {
             }
 
             try {
-                New-Item -ItemType Directory $FolderPath
-                Write-Host -BackgroundColor Black -ForegroundColor Green "Successfully created folder '$FolderPath'"
+                New-Item -ItemType Directory $Path
+                Write-Host -BackgroundColor Black -ForegroundColor Green "Successfully created folder '$Path'"
             }
             catch {
-                Write-Error -Message "FAILED: unable to create folder '$FolderPath'"
+                Write-Error -Message "FAILED: unable to create folder '$Path'"
             }
             
             try {
-                $FolderAcl = Get-Acl $FolderPath
+                $FolderAcl = Get-Acl $Path
             }
             catch {
                 Write-Error -Message "Could not get ACL from folder."
@@ -246,8 +246,8 @@ function New-FolderGroups {
                 }
             }
             try {
-                Set-Acl $FolderPath $FolderAcl
-                Write-Host -BackgroundColor Black -ForegroundColor Green "Successfully updated ACL for folder '$FolderPath'"
+                Set-Acl $Path $FolderAcl
+                Write-Host -BackgroundColor Black -ForegroundColor Green "Successfully updated ACL for folder '$Path'"
             }
             catch {
                 Write-Error -Message $Error[0]
