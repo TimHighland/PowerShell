@@ -111,12 +111,14 @@ function New-FolderGroups {
             }
         }
         if ($AutoName) {
-            $NameBase = ""
-            $SplitFP = $Path.ToUpper().Replace(".$DomainName","").Replace("\\","").Replace("_","").Replace("$","").Split("\")
-            for ($i=0;$i -le $SplitFP.Count-1; $i++) {
-                $str = "_" + $SplitFP[$i]
-                $NameBase += $str
-            }
+            $Split = $Path.Trim("\\").Replace(".$DomainName","") -split "\\"
+            $i = $Split.Count - 1
+            $Server = $Split[0]
+            $Share = $Split[1]
+            $Rest = $Split[2..$i]
+            $Root = (Get-WmiObject -Class Win32_Share -ComputerName $Server | Where-Object { $_.Name -eq $Share }).Path
+            $LocalPath = Join-Path -Path $Root -ChildPath ($Rest -join "\")
+            $NameBase = ($Split[1..$i] -join "_").Replace("$","").Replace(" ","-")
         }
 
         try {
