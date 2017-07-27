@@ -11,12 +11,12 @@ function New-FolderGroups {
         Date            Name            Version     Comments
         2017-07-26      Tim Hoogland    1.0         First version.
     .EXAMPLE 
-        New-FolderGroups -FolderPath "\\server.domain.com\new folder" -DomainLocalOrganizationalUnit "OU=DomainLocal,OU=Groups,OU=Domain.com,DC=Domain,DC=com" -AutoName
+        New-FolderGroups -Path "\\server.domain.com\new folder" -DomainLocalOrganizationalUnit "OU=DomainLocal,OU=Groups,OU=Domain.com,DC=Domain,DC=com" -AutoName
 
         This example creates the folder "new folder" on server.domain.com. Domain Local groups will be created in the Domain.com/Groups/DomainLocal OU. 
         
         The -AutoName switch toggles automatic group name generation.
-    .PARAMETER FolderPath
+    .PARAMETER Path
         Specifies the path to the folder that is to be created by the function.
     .PARAMETER DomainLocalGroupOrganizationalUnit
         
@@ -33,7 +33,7 @@ function New-FolderGroups {
     [CmdletBinding()]
     param(
         [parameter(Mandatory=$true,Position=0)]
-        $FolderPath,
+        $Path,
 
         [parameter(Mandatory=$true,Position=1)]
         [Alias("DLGOU")]
@@ -70,11 +70,16 @@ function New-FolderGroups {
     )
 
     begin {
-        $FolderPath = $FolderPath.TrimEnd("\")
+        $Path = $Path.TrimEnd("\")
         $DomainName = $env:USERDNSDOMAIN
         
-        if (Test-Path $FolderPath) {
-            Write-Error -Message "This folder already exists: $FolderPath"
+        if ($Path.Contains(":")) {
+            Write-Error -Message "Parameter 'Path' does not accept local paths. Please specify a UNC path."
+            return
+        }
+
+        if (!(Test-Path $Path)) {
+            Write-Error -Message "This folder does not exist: $Path"
             return
         }
         if (!$DomainLocalGroupOrganizationalUnit) {
@@ -107,12 +112,20 @@ function New-FolderGroups {
         }
         if ($AutoName) {
             $NameStub = ""
-            $SplitFP = $FolderPath.ToUpper().Replace(".$DomainName","").Replace("\\","").Replace("_","").Replace("$","").Split("\")
+            $SplitFP = $Path.ToUpper().Replace(".$DomainName","").Replace("\\","").Replace("_","").Replace("$","").Split("\")
             for ($i=0;$i -le $SplitFP.Count-1; $i++) {
                 $str = "_" + $SplitFP[$i]
                 $NameStub += $str
             }
         }
+
+        try {
+            $FolderAcl = Get-Acl $Path
+        }
+        catch {
+            Write-Error -Message "Could not get ACL from folder."
+            return
+        }        
 
         $DlgModifyGroupName = $DomainLocalGroupPrefix + $NameStub.Replace(" ","-").TrimStart("_") + $ModifyGroupSuffix
         $DlgReadOnlyGroupName = $DomainLocalGroupPrefix + $NameStub.Replace(" ","-").TrimStart("_") + $ReadOnlyGroupSuffix
@@ -169,12 +182,17 @@ function New-FolderGroups {
             $GroupArray += $GRobj
         }
 
-        Write-Host -BackgroundColor Black -ForegroundColor Cyan "Creating the following folder:"
-        $FolderPath
-        Write-Host "`n"
+        Write-Output "`n"
+        Write-Output "Settings permissions for the following folder:"
+        $Path
+        Write-Output "`n"
 
-        Write-Host -BackgroundColor Black -ForegroundColor Cyan "Creating the following groups:"
-        $GroupArray | Select-Object GroupName,GroupScope,GroupCategory,Members,Permissions,OrganizationalUnit | ft -AutoSize
+        Write-Output "Current ACL:"
+        $FolderAcl.Access | Select-Object IdentityReference,FileSystemRights
+        Write-Output "`n"
+
+        Write-Output "Creating the following groups:"
+        $GroupArray | Select-Object GroupName,GroupScope,GroupCategory,Members,Permissions,OrganizationalUnit | Format-Table -AutoSize
         $Continue = $false
         while ($Continue -eq $false) {
             $Prompt = Read-Host "Continue? [Y/N]"
@@ -191,7 +209,7 @@ function New-FolderGroups {
                 $GrpName = $grp.GroupName
                 try {
                     New-ADGroup -Path $grp.OrganizationalUnit -Name $GrpName -GroupCategory $grp.GroupCategory -GroupScope $grp.GroupScope
-                    Write-Host -BackgroundColor Black -ForegroundColor Green "Successfully created group '$GrpName'"
+                    Write-Output "Successfully created group '$GrpName'"
                 }
                 catch {
                     Write-Error -Message "FAILED: $GrpName not created."
@@ -207,23 +225,7 @@ function New-FolderGroups {
                     Write-Error "Unable to add Global Groups to Domain Local Groups."
                 }            
             }
-
-            try {
-                New-Item -ItemType Directory $FolderPath
-                Write-Host -BackgroundColor Black -ForegroundColor Green "Successfully created folder '$FolderPath'"
-            }
-            catch {
-                Write-Error -Message "FAILED: unable to create folder '$FolderPath'"
-            }
             
-            try {
-                $FolderAcl = Get-Acl $FolderPath
-            }
-            catch {
-                Write-Error -Message "Could not get ACL from folder."
-                return
-            }
-
             $InheritanceFlag     = [System.Security.AccessControl.InheritanceFlags]::ContainerInherit -bor [System.Security.AccessControl.InheritanceFlags]::ObjectInherit
             $PropagationFlag     = [System.Security.AccessControl.PropagationFlags]::None
             $objType             = [System.Security.AccessControl.AccessControlType]::Allow
@@ -238,16 +240,16 @@ function New-FolderGroups {
                     $FolderAcl.SetAccessRule($ModifyAccessRule)
                     $FolderAcl.SetAccessRule($ReadOnlyAccessRule)
                     $GroupsExist = $true
-                    Write-Host -BackgroundColor Black -ForegroundColor Green "Successfully created access rules"
+                    Write-Output "Successfully created access rules"
                 }
                 catch {
-                    Write-Host -BackgroundColor Black -ForegroundColor Yellow "Waiting"
+                    Write-Output "Waiting"
                     Start-Sleep 1
                 }
             }
             try {
-                Set-Acl $FolderPath $FolderAcl
-                Write-Host -BackgroundColor Black -ForegroundColor Green "Successfully updated ACL for folder '$FolderPath'"
+                Set-Acl $Path $FolderAcl
+                Write-Output "Successfully updated ACL for folder '$Path'"
             }
             catch {
                 Write-Error -Message $Error[0]
