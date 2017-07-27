@@ -1,4 +1,4 @@
-function New-FolderGroups { 
+function New-FolderAccessGroups { 
     <# 
     .SYNOPSIS 
         Creates a new folder and associated Domain Local groups in Active Directory with respective NTFS permissions (Modify and ReadAndExecute).
