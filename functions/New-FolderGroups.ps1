@@ -23,7 +23,7 @@ function New-FolderGroups {
     .PARAMETER AutoName
         Switch that toggles automatically generated security group names.
     .PARAMETER IncludeGlobalGroups
-    .PARAMETER NameStub
+    .PARAMETER NameBase
     .PARAMETER DomainLocalGroupPrefix
     .PARAMETER GlobalGroupPrefix
     .PARAMETER ModifyGroupSuffix
@@ -50,7 +50,7 @@ function New-FolderGroups {
         [switch]$IncludeGlobalGroups,
         
         [parameter(Mandatory=$false)]
-        $NameStub = "",
+        $NameBase = "",
         
         [parameter(Mandatory=$false)]
         [Alias("DLGPrefix")]
@@ -111,11 +111,11 @@ function New-FolderGroups {
             }
         }
         if ($AutoName) {
-            $NameStub = ""
+            $NameBase = ""
             $SplitFP = $Path.ToUpper().Replace(".$DomainName","").Replace("\\","").Replace("_","").Replace("$","").Split("\")
             for ($i=0;$i -le $SplitFP.Count-1; $i++) {
                 $str = "_" + $SplitFP[$i]
-                $NameStub += $str
+                $NameBase += $str
             }
         }
 
@@ -127,8 +127,8 @@ function New-FolderGroups {
             return
         }        
 
-        $DlgModifyGroupName = $DomainLocalGroupPrefix + $NameStub.Replace(" ","-").TrimStart("_") + $ModifyGroupSuffix
-        $DlgReadOnlyGroupName = $DomainLocalGroupPrefix + $NameStub.Replace(" ","-").TrimStart("_") + $ReadOnlyGroupSuffix
+        $DlgModifyGroupName = $DomainLocalGroupPrefix + $NameBase.Replace(" ","-").TrimStart("_") + $ModifyGroupSuffix
+        $DlgReadOnlyGroupName = $DomainLocalGroupPrefix + $NameBase.Replace(" ","-").TrimStart("_") + $ReadOnlyGroupSuffix
 
         $DMprops = @{
             GroupName           = $DlgModifyGroupName
@@ -146,8 +146,8 @@ function New-FolderGroups {
         }
 
         if ($IncludeGlobalGroups) {
-            $GgModifyGroupName   = $GlobalGroupPrefix + $NameStub.Replace(" ","-").TrimStart("_") + $ModifyGroupSuffix
-            $GgReadOnlyGroupName = $GlobalGroupPrefix + $NameStub.Replace(" ","-").TrimStart("_") + $ReadOnlyGroupSuffix
+            $GgModifyGroupName   = $GlobalGroupPrefix + $NameBase.Replace(" ","-").TrimStart("_") + $ModifyGroupSuffix
+            $GgReadOnlyGroupName = $GlobalGroupPrefix + $NameBase.Replace(" ","-").TrimStart("_") + $ReadOnlyGroupSuffix
             $DMprops.Members = $GgModifyGroupName
             $DRprops.Members = $GgReadOnlyGroupName
         }
