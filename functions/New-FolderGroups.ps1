@@ -119,6 +119,14 @@ function New-FolderGroups {
             }
         }
 
+        try {
+            $FolderAcl = Get-Acl $Path
+        }
+        catch {
+            Write-Error -Message "Could not get ACL from folder."
+            return
+        }        
+
         $DlgModifyGroupName = $DomainLocalGroupPrefix + $NameStub.Replace(" ","-").TrimStart("_") + $ModifyGroupSuffix
         $DlgReadOnlyGroupName = $DomainLocalGroupPrefix + $NameStub.Replace(" ","-").TrimStart("_") + $ReadOnlyGroupSuffix
 
@@ -174,12 +182,17 @@ function New-FolderGroups {
             $GroupArray += $GRobj
         }
 
-        Write-Host -BackgroundColor Black -ForegroundColor Cyan "Settings permissions for the following folder:"
+        Write-Output "`n"
+        Write-Output "Settings permissions for the following folder:"
         $Path
-        Write-Host "`n"
+        Write-Output "`n"
 
-        Write-Host -BackgroundColor Black -ForegroundColor Cyan "Creating the following groups:"
-        $GroupArray | Select-Object GroupName,GroupScope,GroupCategory,Members,Permissions,OrganizationalUnit | ft -AutoSize
+        Write-Output "Current ACL:"
+        $FolderAcl.Access | Select-Object IdentityReference,FileSystemRights
+        Write-Output "`n"
+
+        Write-Output "Creating the following groups:"
+        $GroupArray | Select-Object GroupName,GroupScope,GroupCategory,Members,Permissions,OrganizationalUnit | Format-Table -AutoSize
         $Continue = $false
         while ($Continue -eq $false) {
             $Prompt = Read-Host "Continue? [Y/N]"
@@ -196,7 +209,7 @@ function New-FolderGroups {
                 $GrpName = $grp.GroupName
                 try {
                     New-ADGroup -Path $grp.OrganizationalUnit -Name $GrpName -GroupCategory $grp.GroupCategory -GroupScope $grp.GroupScope
-                    Write-Host -BackgroundColor Black -ForegroundColor Green "Successfully created group '$GrpName'"
+                    Write-Output "Successfully created group '$GrpName'"
                 }
                 catch {
                     Write-Error -Message "FAILED: $GrpName not created."
@@ -213,14 +226,6 @@ function New-FolderGroups {
                 }            
             }
             
-            try {
-                $FolderAcl = Get-Acl $Path
-            }
-            catch {
-                Write-Error -Message "Could not get ACL from folder."
-                return
-            }
-
             $InheritanceFlag     = [System.Security.AccessControl.InheritanceFlags]::ContainerInherit -bor [System.Security.AccessControl.InheritanceFlags]::ObjectInherit
             $PropagationFlag     = [System.Security.AccessControl.PropagationFlags]::None
             $objType             = [System.Security.AccessControl.AccessControlType]::Allow
@@ -235,16 +240,16 @@ function New-FolderGroups {
                     $FolderAcl.SetAccessRule($ModifyAccessRule)
                     $FolderAcl.SetAccessRule($ReadOnlyAccessRule)
                     $GroupsExist = $true
-                    Write-Host -BackgroundColor Black -ForegroundColor Green "Successfully created access rules"
+                    Write-Output "Successfully created access rules"
                 }
                 catch {
-                    Write-Host -BackgroundColor Black -ForegroundColor Yellow "Waiting"
+                    Write-Output "Waiting"
                     Start-Sleep 1
                 }
             }
             try {
                 Set-Acl $Path $FolderAcl
-                Write-Host -BackgroundColor Black -ForegroundColor Green "Successfully updated ACL for folder '$Path'"
+                Write-Output "Successfully updated ACL for folder '$Path'"
             }
             catch {
                 Write-Error -Message $Error[0]
