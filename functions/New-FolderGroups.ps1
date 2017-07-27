@@ -259,7 +259,7 @@ function New-FolderGroups {
                             $Path,
                             $NewAcl
                         )
-                        Set-Acl -Path $Path $NewAcl
+                        Set-Acl -Path $Path -AclObject $NewAcl
                     } -ArgumentList $LocalPath,$FolderAcl                    
                 }
 
