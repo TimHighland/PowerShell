@@ -38,8 +38,12 @@ function New-FolderAccessGroups {
     #>
     [CmdletBinding()]
     param(
-        [parameter(Mandatory=$true,Position=0)]
-        $Path,
+        [parameter(
+            Mandatory=$true,
+            Position=0,
+            ValueFromPipeline=$true)
+        ]
+        $Folder,
 
         [parameter(Mandatory=$true,Position=1)]
         [Alias("DLGOU")]
@@ -76,18 +80,9 @@ function New-FolderAccessGroups {
     )
 
     begin {
-        $Path = $Path.TrimEnd("\")
         $DomainName = $env:USERDNSDOMAIN
-        
-        if ($Path.Contains(":")) {
-            Write-Error -Message "Parameter 'Path' does not accept local paths. Please specify a UNC path."
-            return
-        }
+        $FolderFullName = $Folder.FullName
 
-        if (!(Test-Path $Path)) {
-            Write-Error -Message "This folder does not exist: $Path"
-            return
-        }
         if (!$DomainLocalGroupOrganizationalUnit) {
             Write-Error "You must specify a Domain Local Group Organizational Unit."
             return
@@ -117,7 +112,7 @@ function New-FolderAccessGroups {
             }
         }
         if ($AutoName) {
-            $Split = $Path.Trim("\\").Replace(".$DomainName","") -split "\\"
+            $Split = $FolderFullName.Trim("\\").Replace(".$DomainName","") -split "\\"
             $i = $Split.Count - 1
             $Server = $Split[0]
             $Share = $Split[1]
@@ -126,14 +121,6 @@ function New-FolderAccessGroups {
             $LocalPath = Join-Path -Path $Root -ChildPath ($Rest -join "\")
             $NameBase = ($Split[1..$i] -join "_").Replace("$","").Replace(" ","-")
         }
-
-        try {
-            $FolderAcl = Get-Acl $Path
-        }
-        catch {
-            Write-Error -Message "Could not get ACL from folder."
-            return
-        }        
 
         $DlgModifyGroupName = $DomainLocalGroupPrefix + $NameBase.Replace(" ","-").TrimStart("_") + $ModifyGroupSuffix
         $DlgReadOnlyGroupName = $DomainLocalGroupPrefix + $NameBase.Replace(" ","-").TrimStart("_") + $ReadOnlyGroupSuffix
@@ -189,15 +176,23 @@ function New-FolderAccessGroups {
             $GroupArray += $GMobj
             $GroupArray += $GRobj
         }
+        if (!$FolderExists) {
+            Write-Output "`n"
+            Write-Output "The following folder does not exist and will be created:"
+            $FolderFullName
+            Write-Output "`n"
+        }        
+        elseif ($FolderExists = $true) {
+            Write-Output "`n"
+            Write-Output "Settings permissions for the following folder:"
+            $FolderFullName
+            Write-Output "`n"
 
-        Write-Output "`n"
-        Write-Output "Settings permissions for the following folder:"
-        $Path
-        Write-Output "`n"
+            Write-Output "Current ACL:"
+            $FolderAcl.Access | Select-Object IdentityReference,FileSystemRights
+            Write-Output "`n"            
+        }
 
-        Write-Output "Current ACL:"
-        $FolderAcl.Access | Select-Object IdentityReference,FileSystemRights
-        Write-Output "`n"
 
         Write-Output "Creating the following groups:"
         $GroupArray | Select-Object GroupName,GroupScope,GroupCategory,Members,Permissions,OrganizationalUnit | Format-Table -AutoSize
@@ -242,22 +237,13 @@ function New-FolderAccessGroups {
             $ModifyAccessRule    = New-Object System.Security.AccessControl.FileSystemAccessRule $ModifyPermission
             $ReadOnlyAccessRule  = New-Object System.Security.AccessControl.FileSystemAccessRule $ReadOnlyPermission
 
-            $GroupsExist = $false
-            while ($GroupsExist -eq $false) {
-                try {
-                    $FolderAcl.SetAccessRule($ModifyAccessRule)
-                    $FolderAcl.SetAccessRule($ReadOnlyAccessRule)
-                    $GroupsExist = $true
-                    Write-Output "Successfully created access rules"
-                }
-                catch {
-                    Write-Output "Waiting"
-                    Start-Sleep 1
-                }
-            }
+            $FolderAcl = $Folder.GetAccessControl()
+            $FolderAcl.SetAccessRule($ModifyAccessRule)
+            $FolderAcl.SetAccessRule($ReadOnlyAccessRule)            
+
             try {
                 if ($Server -eq $env:COMPUTERNAME) {
-                    Set-Acl -Path $Path -AclObject $FolderAcl
+                    Set-Acl -Path $FolderFullName -AclObject $FolderAcl
                 }
                 else {
                     Invoke-Command -ComputerName $Server -ScriptBlock {
@@ -270,7 +256,7 @@ function New-FolderAccessGroups {
                 }
 
 
-                Write-Output "Successfully updated ACL for folder '$Path'"
+                Write-Output "Successfully updated ACL for folder '$FolderFullName'"
             }
             catch {
                 Write-Error -Message $Error[0]
