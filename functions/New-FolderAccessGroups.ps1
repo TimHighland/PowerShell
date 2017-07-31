@@ -18,7 +18,7 @@ function New-FolderAccessGroups {
         This example creates the folder "new folder" on server.domain.com. 
         
         Domain Local groups will be created in the Domain.com/Groups/DomainLocal OU. Group names are automatically generated.
-    .PARAMETER Path
+    .PARAMETER Folder
         Specifies the path to the folder that is to be created by the function.
     .PARAMETER DomainLocalGroupOrganizationalUnit
         Specifies the Organizational Unit in which to create Domain Local security groups.
