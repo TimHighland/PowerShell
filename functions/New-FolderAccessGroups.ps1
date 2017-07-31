@@ -1,22 +1,23 @@
 function New-FolderAccessGroups { 
     <# 
     .SYNOPSIS 
-        Creates a new folder and associated Domain Local groups in Active Directory with respective NTFS permissions (Modify and ReadAndExecute).
+        Creates Domain Local groups and sets Modify and ReadAndExecute permissions to a specified folder.
     .DESCRIPTION 
-        'New-FolderGroups' creates a new folder on a specified network location and subsequently creates separate Modify and Read-Only Domain Local Security groups in the Active Directory domain. 
+        New-FolderAccessGroups takes a DirectoryInfo-object as pipeline input and creates associated Domain Local groups in Active Directory with respective NTFS permissions (Modify and ReadAndExecute).
         
         Group name prefixes and suffixes can be specified, or group names can be generated automatically.
-
+        
+        Can also create associated Global groups as members of the respective Domain Local groups.
     .CHANGELOG
         Date            Name            Version     Comments
         2017-07-26      Tim Hoogland    1.0         First version.
         2017-07-27      Tim Hoogland    1.1         Function no longer creates folders. 'Set-Acl' is now executed remotely.
     .EXAMPLE 
-        New-FolderGroups -Path "\\server.domain.com\new folder" -DomainLocalOrganizationalUnit "OU=DomainLocal,OU=Groups,OU=Domain.com,DC=Domain,DC=com" -AutoName
+        Get-Item -Path "\\server.domain.com\new folder" | New-FolderAccessGroups -DomainLocalOrganizationalUnit "OU=DomainLocal,OU=Groups,OU=Domain.com,DC=Domain,DC=com" -AutoName
 
-        This example creates the folder "new folder" on server.domain.com. Domain Local groups will be created in the Domain.com/Groups/DomainLocal OU. 
+        This example creates the folder "new folder" on server.domain.com. 
         
-        The -AutoName switch toggles automatic group name generation.
+        Domain Local groups will be created in the Domain.com/Groups/DomainLocal OU. Group names are automatically generated.
     .PARAMETER Path
         Specifies the path to the folder that is to be created by the function.
     .PARAMETER DomainLocalGroupOrganizationalUnit
@@ -24,7 +25,7 @@ function New-FolderAccessGroups {
     .PARAMETER AutoName
         Switch that toggles automatically generated security group names.
     .PARAMETER IncludeGlobalGroups
-        Switch that toggles the creation of Global security groups. Use this when there are no suitable role groups available.
+        Switch that toggles the creation of Global security groups.
     .PARAMETER NameBase
         Specifies the base of the name for the created security groups.
     .PARAMETER DomainLocalGroupPrefix
